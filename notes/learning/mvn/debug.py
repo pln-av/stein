@@ -66,9 +66,9 @@ class SRK(object):
 
         dgdx = self.target.log_grad(x)
         dgdy = self.target.log_grad(y)
-        out += self.kernel.kernel_x(x, y)*dgdy
-        out += self.kernel.kernel_y(x, y)*dgdx
-        out += self.kernel.kernel(x, y)*dgdx*dgdy
+        out += self.kernel.grad_x(x, y)*dgdy
+        out += self.kernel.grad_y(x, y)*dgdx
+        out += self.kernel.grad_xy(x, y)*dgdx*dgdy
 
 if __name__ == '__main__':
 

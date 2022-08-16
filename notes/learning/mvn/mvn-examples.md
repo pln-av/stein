@@ -4,15 +4,24 @@
 
 In this section I will work through a few simple examples to clarify my understanding
 of the problem.  These will focus on the IMQ kernel and the target distribution will
-be the multivariate normal distribution.  The multivariate normal distribution with mean $\mu$
-and covariance $\Sigma$ is 
-\eq{ p(\mb{z}) = \frac{1}{\sqrt{ \textrm{det}\left( 2 \pi \Sigma \right) }} \, \textrm{exp}\left[ -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \right] \nonumber }
+be the multivariate normal distribution.  The multivariate normal distribution with mean $\mu$, 
+covariance $\Sigma$ and dimension $d$ is 
+\eq{ p(\mb{z}) = \frac{1}{\sqrt{ \textrm{det}\left( \left( 2 \pi\right)^d \Sigma \right) }} \, \textrm{exp}\left[ -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \right] \nonumber }
 with corresponding log target $g(\mb{z})$ 
-\eq{ g(\mb{z}) = -\frac{1}{2} \textrm{log}\, \left( \textrm{det}\left( 2 \pi \Sigma \right)  \right) -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \nonumber }
+\eq{ g(\mb{z}) = -\frac{1}{2} \textrm{log}\, \left( \textrm{det}\left( \left(2 \pi\right)^d \Sigma \right)  \right) -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \nonumber }
 where $\mb{z}\in \mbb{R}^d$ and of course the additive constant can be ignored for our purposes.  The 
 IMQ kernel is
 \eq{ k(\mb{x},\mb{y}) = \left( \alpha + \|\mb{x}-\mb{y} \|^2 \right)^\beta \nonumber }
 with $\alpha>0$ and $-1 < \beta < 0$.
+
+The multivariate normal is implemented in \verb|mvn.py| and the IMQ kernel in \verb|util.py|.
+Note that when run \verb|mvn.py| tests the gradient calculations
+
+* $\mb{\nabla} \, g(\mb{z})$ 
+* $\mb{\nabla}_{x} \, k(\mb{x}, \mb{y})$ and $\mb{\nabla}_{y} \, k(\mb{x}, \mb{y})$
+* The $d$ terms in $\mb{\nabla}_{x} \cdot \mb{\nabla}_{y} \, k(\mb{x}, \mb{y})$
+
+against numeric approximations.  
 
 \newpage 
 
@@ -182,15 +191,38 @@ These formulas are implemented in \verb|stein/notes/learning/mvn/mvn.py| and are
 
 ### The d=2 Greedy Objective Function
 
-As one expects the objective function in two dimensions is complicated.  Actually, comparing these to the $d=1$
-cases one case see some similarities in shape between the $n=2$ objective in both $d=1$ and $d=2$.  Is this something
-to take note of for the future.
+As one expects the objective function in two dimensions is complicated.  In this example I take 
+\eq{ \mu = \transpose{ \left( -0.5, 0.5 \right) } } and correlation 
+\eq{ 
+    \Sigma = \mat{ 1.0 & 0.5 \\ 0.5 & 2.0 }
+}
+As per the one dimension examples I choose the initial Stein Point to be the mode $\mb{x}_1 = \mu$, and use
+the \verb|scipy| \verb|scipy.optimize.dual_annealing| minimiser which appears to also work well in two dimension.
+The following plot shows contours of the objective for the first eight Stein Points (after the initial choice) and
+the points chosen by the minimiser are the red crosses.  These points appear plausible (without doing rigorous 
+checking).
 
-The following plot shows contours of the objective for the $n=2$ Stein Point.  This bimodal function looks
-analgous to the same curve in $d=1$.  The global minimizer cannot distinguish between minima (they are essentially identical)
-but due to symmetry this might be expected and either choice is equally good.  The black dots are the choices made
-by multiple runs of the \verb|dual_annealing| routine in \verb|scipy|, where roughly half appear in each minima.
+![Countours of the Greedy Objective for the Bivariate Normal Target](normal16.png)
 
-![Countours of the Greedy Objective for the Second Stein Point](normal15.png)
+\newpage
 
+### The First n=20 Stein Points for the Bivariate Normal
+
+Using the same bivariate normal example from above, I compute the first 20 Stein Points.  This is
+found in the script \verb|normal1-5.py|, which produces output like
+\blist{}
+```bash
+ *** Scipy found point (0.01. 1.72) after 0:00:03.419930 (H:M:S)
+ *** Scipy found point (-1.01. -0.72) after 0:00:04.777972 (H:M:S)
+ *** Scipy found point (-1.38. 0.86) after 0:00:05.857179 (H:M:S)
+ *** Scipy found point (0.43. 0.11) after 0:00:06.803905 (H:M:S)
+ *** Scipy found point (-0.83. 1.87) after 0:00:08.909907 (H:M:S)
+ *** Scipy found point (0.75. 1.20) after 0:00:09.986271 (H:M:S)
+ ...
+ ...
+ ```
+
+ A contour plot of the target pdf and $n=20$ Stein Points is plotted below.
+
+![Countours of the Target PDF and Computed Stein Points](normal17.png)
 

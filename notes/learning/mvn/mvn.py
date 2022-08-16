@@ -1,34 +1,8 @@
 import numpy as np
 import scipy as sp
+import scipy.stats
+import util 
 
-def norm2(x):
-    return np.sum(x*x)
-
-class IMQ(object):
-    def __init__(self, alpha, beta):
-        self.alpha = alpha
-        self.beta = beta
-
-    def __call__(self, x, y):
-        return np.power( self.alpha + norm2(x-y), self.beta)
-
-    def grad_x(self, x, y):
-        diff = x - y
-        arg = self.alpha + norm2(diff)
-        return 2.0*self.beta*diff*np.power(arg, self.beta - 1.0)
-
-    def grad_y(self, x, y):
-        return -self.grad_x(x, y)
-
-    def grad_xy(self, x, y):
-        diff = x-y 
-        arg = self.alpha + norm2(diff)
-        t1 = 2.0*(self.beta-1)*diff*diff*np.power(arg, self.beta-2.0)
-        t2 = np.power(arg, self.beta - 1.0)
-        return -2.0*self.beta*(t1 + t2)
-
-    def grad_yx(self, x, y):
-        return self.grad_xy(x, y)
 
 class Normal(object):
     def __init__(self, mu, sigsq):
@@ -58,79 +32,72 @@ class Normal(object):
         err = z - self.mu
         return -np.matmul(err.T, self.inv_sigsq)[0]
 
-class SRK(object):
-    def __init__(self, target, kernel):
-        self.target = target 
-        self.kernel = kernel 
 
-    def __call__(self, x, y):
-
-        # evaluate the ksr for the (array) points x, y
-        dgdx = self.target.log_grad(x)
-        dgdy = self.target.log_grad(y)
-        t1 = np.sum( self.kernel.grad_xy(x, y) )
-        t2 = np.sum( self.kernel.grad_x(x, y)*dgdy )
-        t3 = np.sum( self.kernel.grad_y(x, y)*dgdx )
-        t4 = self.kernel.kernel(x, y) * np.sum( dgdx*dgdy ) 
-        t = t1 + t2 + t3 + t4
-        return t
 
 if __name__ == '__main__':
 
     # construct normal pdf for d=2
     d = 2
-    mu = np.random.rand(d)
-    sigsq = np.array([[3.0,0.6],[0.6,6.0]], dtype=float)
+    mu = np.array([0.0 , 0.0])
+    sigsq = np.array([  [1.0,0.0],
+                        [0.0, 1.0]
+                    ], dtype=float)
     normal = Normal(mu, sigsq)
 
-    alpha = 1.0
+    alpha = 1.00
     beta = -0.50
-    imq = IMQ(alpha, beta)
+    imq = util.IMQ(alpha, beta)
     print('Checking derivative calculations vs numeric derivatives for:')
     print(' --> IMQ kernel')
     print(' --> normal pdf')
 
-    eps = 1.0E-7 
+    eps = 1.0E-5
     if True:
         print('\nTesting Normal PDF Calculations vs Scipy and Numerics')
 
-        sp_normal = sp.stats.multivariate_normal(mean=mu, cov=sigsq)
-        m = 5 # number of test points
+        sp_normal = scipy.stats.multivariate_normal(mean=mu, cov=sigsq)
+        m = 2 # number of test points
         z = -1 + 2*np.random.rand(m, d)
-
 
         print(' --> Test 1: PDF calculation.')
         for idx in range(m):
             p = z[idx, :]
             print(' * Point %d: Scipy: %.7f vs MVN: %.7f' % (idx, sp_normal.pdf(p), normal(p)))
         print('')
-        print(' --> Gradient Calculation')
+        print(' --> Test 2: Log Gradient Calculation')
+        g = lambda z : np.log(sp_normal.pdf(z))
+
         for idx in range(m):
             p = z[idx, :]
             dgdx = normal.log_grad(p)
+            print(' ** Point %d ** ')
+            
             for i in range(d):
                 v = np.zeros(d, dtype=float)
                 v[i] = 1.0
-                p_u = p + eps*v
-                grad = ( np.log( sp_normal.pdf(p_u)) - np.log( sp_normal.pdf(p)) )/eps
-                print(' * Point %d: d log p / d_x%d: Scipy: %.7f vs MVN: %.7f' % (idx, i, dgdx[i], grad))
+                grad = util.grad_1d(g, p, v)
+                print('     * Point %d: d log p / d_x%d: Scipy: %.7f vs MVN: %.7f' % (idx, i, grad, dgdx[i]))
 
-    """
-    # construct IMQ kernald
-   
+        print('')
+        print(' --> Test 3: Kernel Derivative Calculation.')
+        z1 = z 
+        z2 = np.random.rand(m, d)
+        for idx in range(m):
+            px = z1[idx, :]
+            py = z2[idx, :]
 
-    x = np.array([[1.0], [6.0]], dtype=float)
-    y = np.array([[2.0], [-1.0]], dtype=float)
+            dkdx = imq.grad_x(px, py)
+            dkdy = imq.grad_y(px, py)
+            d2k  = imq.grad_xy(px, py)
+            for i in range(d):
+                v = np.zeros(d, dtype=float)
+                v[i] = 1.0
+                gradx, grady, gradxy = util.grad_2d(imq, px, py, v)
+                
+                print(' ** Point %d **' % idx)
+                print('     * Points %d: dkd_x%d: Numeric: %.7f | Analytic: %.7f' % (idx, i, gradx, dkdx[i]))
+                print('     * Points %d: dkd_y%d: Numeric: %.7f | Analytic: %.7f' % (idx, i, grady, dkdy[i]))
+                print('     * Points %d: d2k_%d: Numeric: %.7f | Analytic: %.7f' % (idx, i, gradxy, d2k[i]))
 
-    # kernel gradients
-    d2kdxy = kernel.kernel_xy(x, y)
-    dkdx = kernel.kernel_x(x, y)
-    dkdy = kernel.kernel_y(x, y)
-
-    # log target gradients
-    dgdx = normal.log_grad(x)
-    dgdy = normal.log_grad(y)
-
-    srk = SRK(normal, kernel)
-    """
+        
     
