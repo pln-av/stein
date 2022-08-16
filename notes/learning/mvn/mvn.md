@@ -1,16 +1,14 @@
 
 \tableofcontents
 
-# An Idiot's Guide to Stein Points
-
 These are my (ie the idiot) introduction to Stein Points, and the two associated computational
 problems I will investigate.  These will be fleshed out over time as I come to understand more
 theory, and will include a number of examples that I found helpful on the way. Essentially 
 everything in here is taken from Chen Et Al (2018). 
 
-## Stein Point Concepts 
+# Stein Point Concepts 
 
-### Motivation 
+## Motivation 
 
 A common statistical problem is to approximate a probability distribution
 $P(\mb{x}), \, \mb{x}\in\mbb{R}^d$ with a sequence of points $\left\{\mb{x}_i \right\}_{i=1}^{n}$.
@@ -32,7 +30,7 @@ by defining transition probabilities as ratios, so that these unknown constants 
 Stein Points also do not require multiplicative constants to be known, so exist in a smaller
 set of plausible methods for this very common problem.
 
-### Definitions
+## Definitions
 
 A *discrepency* quantifies how well the points $\left\{\mb{x}_i \right\}$ cover the domain
 of the random variable $\mb{x}$ with respect to the distribution $p(\mb{x})$.  The set of 
@@ -50,7 +48,7 @@ the *Kernel Stein Discrepency* (KSD) is defined
 where $k_0(\mb{x},\mb{y})$ is the *Stein Reproducing Kernel* and is defined in a subsequent 
 section.  
 
-### Process 
+## Process 
 
 The process of approximating a target $p(\mb{x})$ using Stein Points proceeds by
 
