@@ -6,9 +6,9 @@ In this section I will work through a few simple examples to clarify my understa
 of the problem.  These will focus on the IMQ kernel and the target distribution will
 be the multivariate normal distribution.  The multivariate normal distribution with mean $\mu$, 
 covariance $\Sigma$ and dimension $d$ is 
-\eq{ p(\mb{z}) = \frac{1}{\sqrt{ \textrm{det}\left( \left( 2 \pi\right)^d \Sigma \right) }} \, \textrm{exp}\left[ -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \right] \nonumber }
+\eq{ p(\mb{z}) = \frac{1}{\sqrt{ \left( \left( 2 \pi\right)^d \textrm{det} \Sigma \right) }} \, \textrm{exp}\left[ -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \right] \nonumber }
 with corresponding log target $g(\mb{z})$ 
-\eq{ g(\mb{z}) = -\frac{1}{2} \textrm{log}\, \left( \textrm{det}\left( \left(2 \pi\right)^d \Sigma \right)  \right) -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \nonumber }
+\eq{ g(\mb{z}) = -\frac{1}{2} \textrm{log}\, \left( \left( 2 \pi\right)^d \textrm{det}\left( \Sigma \right)  \right) -\frac{1}{2} \transpose{ \left(\mb{z}-\mu\right) }  \Sigma^{-1} \left(\mb{z}-\mu\right) \nonumber }
 where $\mb{z}\in \mbb{R}^d$ and of course the additive constant can be ignored for our purposes.  The 
 IMQ kernel is
 \eq{ k(\mb{x},\mb{y}) = \left( \alpha + \|\mb{x}-\mb{y} \|^2 \right)^\beta \nonumber }
@@ -225,4 +225,43 @@ found in the script \verb|normal1-5.py|, which produces output like
  A contour plot of the target pdf and $n=20$ Stein Points is plotted below.
 
 ![Countours of the Target PDF and Computed Stein Points](normal17.png)
+
+\newpage 
+
+## Example 2.2 Computing the KSD and Starting a Python Stein Point Library
+
+The last example in this set is to outline the start of a simple Stein Point library
+in python.  This is found at \verb|stein/code/python/lib| and currently consists
+of four groups of files:
+
+* \verb|kernel.py| and \verb|kernel_base.py| for defining general kernal functions $k(\mb{x},\mb{y})$
+* \verb|target.py| and \verb|target_base.py| for defining general targets $p(\mb{x})$
+* \verb|stein.py| where generic KSD, SRK and greedy objectives are defined
+* \verb|util.py| where a couple of utility routines I seem to use regularly are kept.
+
+The script \verb|stein/code/python/example/mvn1.py| demonstrates how to use the library,
+and provides an example of using kernals, targets and \verb|scipy| global optimization routines
+to compute Stein Points. It is run (for $n=25$ points for example) like
+\blist{}
+```bash
+python mvn1.py --n 25
+```
+where \verb|PYTHONPATH=<path_to_stein>/stein/code/python/lib| should be set for the imports required.
+This script produces output like
+\blist{}
+```bash
+$ python mvn1.py --n 25
+Computing first 25 Stein Points for MVN Example 1.
+ ** Stein Point (1) found in 0:00:00.755472 (H:M:S) at x: [-0.50001774  0.49998333]
+ ** Stein Point (2) found in 0:00:02.494034 (H:M:S) at x: [0.00604887 1.72167402]
+ ** Stein Point (3) found in 0:00:03.273162 (H:M:S) at x: [-1.00729827 -0.72474337]
+ ** Stein Point (4) found in 0:00:04.227296 (H:M:S) at x: [0.37904274 0.13130274]
+ ** Stein Point (5) found in 0:00:04.875321 (H:M:S) at x: [-1.43584947  0.88528364]
+ ** Stein Point (6) found in 0:00:03.568377 (H:M:S) at x: [0.7054779  1.23707363]
+ ** Stein Point (7) found in 0:00:01.400034 (H:M:S) at x: [-0.88527567  1.87834818]
+ ....
+```
+and writes a plot of the target pdf, Stein Points, and KSD which is shown below:
+
+![Stein Points and KSD from Small Python Library](normal18.png)
 

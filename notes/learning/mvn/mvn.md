@@ -26,8 +26,8 @@ are many techniques for generating convergent sequences of points from a given d
 but most require all normalisation constants to be known.  This requirement is commonly 
 violated in practice, where we know the *functional form* of the distribution but may not be
 able to compute multiplicative constants.  MCMC techniques can circumvent this problem 
-by defining transition probabilities as ratios, so that these unknown constants cancel.  
-Stein Points also do not require multiplicative constants to be known, so exist in a smaller
+by defining transition probabilities as ratios, so that these unknown constants cancel.  Stein
+Points also do not require multiplicative constants to be known, so exist in a smaller
 set of plausible methods for this very common problem.
 
 ## Definitions
@@ -44,7 +44,7 @@ chosen from a *Stein Set*) both simplify the maths in the more general RHKS and 
 of the normalisation constants.  Such discrepencies are called *Kernel Stein Discrepencies*
 (KSD), and involve particular kernels referred to as *Stein Reproducing Kernels*.  In particular
 the *Kernel Stein Discrepency* (KSD) is defined
-\eq{ \mc{D} = \sqrt{ \frac{1}{n} \sum_i \sum_j k_0(\mb{x}_i, \mb{y}_j)} }
+\eq{ \mc{D} = \sqrt{ \frac{1}{n^2} \sum_i \sum_j k_0(\mb{x}_i, \mb{y}_j)} }
 where $k_0(\mb{x},\mb{y})$ is the *Stein Reproducing Kernel* and is defined in a subsequent 
 section.  
 
@@ -58,7 +58,7 @@ is subject to various technical conditions.
 3. Compute the *Stein Reproducing Kernel* (SRK) $k_0(\mb{x},\mb{y})$ by solving the integral equation 
 $\int \tau[k]dP=0$
 4. Use the *Stein Reproducing Kernel* (SRK) to compute the *Kernel Stein Discrepency*
-\eq{ \boxed{ \mc{D} = \sqrt{ \frac{1}{n} \sum_i \sum_j k_0(\mb{x}_i, \mb{y}_j)} } \nonumber }
+\eq{ \boxed{ \mc{D} = \sqrt{ \frac{1}{n^2} \sum_i \sum_j k_0(\mb{x}_i, \mb{y}_j)} } \nonumber }
 5. Choose an optimisation strategy to minimise the KSD above
 
 Note that *Stein Operators* $\tau$ are chosen to
