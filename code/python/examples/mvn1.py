@@ -45,7 +45,8 @@ if __name__ == '__main__':
     print(' ** Stein Point (1) found in %s (H:M:S) at x:' % util.time_string(s, e), opt.x)
     x = [opt.x]
     t = [e-s]
-    
+
+    s0 = time.time()
     while len(x) < args.n:
 
         # continue until we have all the points we want
@@ -60,7 +61,9 @@ if __name__ == '__main__':
         t.append(e-s)
 
     fig, axs = plt.subplots(2, figsize=(8.27, 11.69))
-
+    e0 = time.time()
+    print('Total Compute time: %s' % util.time_string(s0, e0))
+    
     # plot the distribution and points
     xp = yp = np.linspace( bounds[0][0], bounds[0][1], 201)
     X, Y, Z = util.fill_grid( normal, xp, yp)
