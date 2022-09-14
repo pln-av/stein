@@ -1,0 +1,234 @@
+#include <iostream>
+#include <limits>
+#include <cmath>
+#include "stein/util/types.H"
+#include "stein/la/matrix.H"
+
+#include "test_write.H"
+
+/*
+template <typename T>
+concept UnivariateGettable = requires (T t) { t.operator(); };
+
+template <typename T>
+concept IndependantVariable = UnivariateGettable<T> && stein::util::is_mkl_float_v<typename T::value_type>;
+
+template <typename T>
+requires IndependantVariable<T>
+void func(T t) { return; }
+*/
+
+
+/*
+  Define ZeroOrderFunction and FirstOrderFunction, the basic concepts for minimisation library.
+  FirstOrderFunctions are any calleable types operating on a ParameterType.  Interestingly 
+  this wont work on a scalar function!  ugh  FirstOrderFunctions are ZeroOrderFunctions but 
+also provide a gradient(x, gx) method, which evaluates gradient at x and writes into gx.
+ */
+
+
+/* Concepts for ZeroOrderFunction and FirstOrderFunction */
+template <typename FunctionType>
+concept ZeroOrderFunction = requires (FunctionType f, typename FunctionType::ParameterType p)
+  {
+   typename FunctionType::ParameterType;
+   typename FunctionType::ParameterType::value_type;
+   { f(p) } -> std::same_as<typename FunctionType::ParameterType::value_type>;
+   { f.dimension() } -> std::same_as<stein::util::int_t>;
+  };
+
+template <typename FunctionType>
+concept FirstOrderFunction = requires (FunctionType f, typename FunctionType::ParameterType p)
+  {
+   requires ZeroOrderFunction<FunctionType>;
+   { f.gradient(p, p) } -> std::same_as<void>;
+  };
+
+template <typename CriteriaType>
+concept TerminationCriteria = requires(CriteriaType ct)
+  {
+   requires ZeroOrderFunction<typename CriteriaType::FunctionType>;
+   /*{ t.stop(v, v, v, mit) } -> std::is_same<bool>;
+   { t.max_abs_tol } -> std::is_same<decltype(v)>;
+   { t.max_rel_tol } -> std::is_same<decltype(v)>;
+   { t.max_grad_tol } -> std::is_same<decltype(v)>;
+   { t.max_iterations } -> std::is_same<stein::util::int_t>;
+   */
+  };
+
+template <typename FunctionType>
+concept ZeroOrderMinimiser = ZeroOrderFunction<FunctionType>;
+
+// define a ZeroOrderOptimiserd
+// ZeroOrderOptimiser is templated by the FunctionType, and from here
+// we require FunctionType is a valid ZeroOrderFunction.  Note that
+// FirstOrderFunctions are also ZeroOrderFunctions, so ZeroOrderOptimiser
+// can be used for both.
+
+/*
+template <typename FunctionType>
+requires ZeroOrderFunction<FunctionType, typename FunctionType::ParameterType>
+class ZeroOrderOptimiser
+{
+public:
+  ZeroOrderOptimiser(const FunctionType& t) { std::cout << "Optimiser" << std::endl; };
+};
+*/
+
+
+template <typename T>
+class Bowl
+{
+public:
+  using ParameterType = T;
+  using ValueType = typename T::value_type;
+  
+  Bowl(void) { std::cout << "Bowl" << std::endl; }
+  ValueType operator()(const T& t) const
+  {
+    const ValueType x { t(0) };
+    const ValueType y { t(1) };
+    return 2.0*(x-1)*(x-1) + y*y*y*y;
+  }
+
+  void gradient(const T& X, T& G) const
+  { 
+    const ValueType x { X(0) };
+    const ValueType y { X(1) };
+    G(0) = 4*(x-1);
+    G(1) = 4*y*y*y;
+  };
+
+  stein::util::int_t dimension(void) const { return 2; };
+};
+
+template <typename T>
+struct StandardCriteria
+{
+  using ValueType = typename T::ParameterType::value_type;
+  using FunctionType = T;
+  StandardCriteria(ValueType ma=1.0E-6, ValueType mr=1.0E-5, ValueType mg=1.0E-5, stein::util::int_t mi = 100)
+    : max_abs_tol( ma ), max_rel_tol( mr ), max_iterations( mi ) {}
+
+  // required data
+  ValueType max_abs_tol;
+  ValueType max_rel_tol;
+  ValueType max_grad_tol;
+  stein::util::int_t max_iterations;
+
+  // required termination criteria
+  bool stop(ValueType abs_tol, ValueType rel_tol, ValueType grad_tol, stein::util::int_t idx) const
+  {
+    const bool iters_stop { idx > max_iterations };
+    const bool abs_tol_stop { abs_tol < max_abs_tol };
+    const bool rel_tol_stop { rel_tol < max_rel_tol };
+    const bool grad_stop { grad_tol < max_grad_tol };
+    return iters_stop || abs_tol_stop || rel_tol_stop || grad_stop;
+  }
+};
+
+template <typename FunctionType, typename Criteria>
+requires ZeroOrderMinimiser<FunctionType> && TerminationCriteria<Criteria>
+class GradientDescent
+{
+public:
+  using ValueType = typename FunctionType::ValueType;
+  using ParameterType = typename FunctionType::ParameterType;
+  GradientDescent(FunctionType f, Criteria tc, Writer& writer)
+    : _function(f), _tc(tc), _dimension(f.dimension()), _tmp_x(f.dimension()), _writer(writer) {}
+  void minimise(const ParameterType& ic, ParameterType& out)
+  {
+    std::cout << "Begin GD Minimisation." << std::endl;
+    stein::util::int_t idx { 0 };
+    ValueType abs_tol { std::numeric_limits<ValueType>::max() };
+    ValueType rel_tol { std::numeric_limits<ValueType>::max() };
+    ValueType grad_tol { std::numeric_limits<ValueType>::max() };
+    ValueType f_prev, f_curr;
+
+    _writer.initialise();
+    std::copy(ic.data(), ic.data()+_dimension, out.data());
+    while ( !_tc.stop(abs_tol, rel_tol, grad_tol, idx) )
+      {
+	
+	// compute gradient vector.
+	// out := x_k
+	// _tmp_x := g_k
+	
+	//std::cout << "idx: " << idx << ", out=" << out << ", abs_tol=" << abs_tol << ", rel_tol=" << rel_tol << std::endl;
+
+	f_prev = _function(out);
+	_writer.write(out, f_prev);
+	_function.gradient(out, _tmp_x);
+
+	// do this update manually first
+	ValueType g_norm { 0.0 };
+	for (stein::util::int_t j=0; j<_dimension; ++j)
+	  {
+
+	    // current x_k, g_k
+	    const ValueType xk_i { out(j) };
+	    const ValueType gk_i { _tmp_x(j) };
+	    g_norm += gk_i*gk_i;
+
+	    // do updates
+	    out(j) -= _gamma*gk_i;
+	  }
+	f_curr = _function(out);
+	const ValueType df { f_curr - f_prev };
+	
+	// prepare stopping criteria
+	abs_tol = std::abs(df);
+	rel_tol = std::abs(df/f_curr);
+	grad_tol = _gamma * std::sqrt(g_norm);
+
+	++idx;
+      };
+
+    //std::cout << "Terminate @ idx: " << idx << ", out=" << out << ", abs_tol=" << abs_tol << ", rel_tol=" << rel_tol << std::endl;
+    _writer.write(out, f_curr);
+    return;
+  };
+private:
+
+  
+private:
+  const FunctionType _function;
+  const Criteria _tc;
+  const stein::util::int_t _dimension;
+  ParameterType _tmp_x;
+  ValueType _gamma { 0.025 };
+  Writer& _writer;
+};
+/*
+template <typename FunctionType>
+requires ZeroOrderFunction<FunctionType>
+class ZeroOrderMinimiser
+{
+public:
+  ZeroOrderMinimiser(FunctionType& f) {};
+};
+*/
+int main()
+{
+  std::cout << "Test Optimiser Design." << std::endl;
+
+  // yeap this will fail.  func is not compatiblek
+  using Vectorf = stein::la::RowVector<float>;
+
+  // set objective function and a consistent stopping criteria
+  Bowl<Vectorf> bowl;
+  StandardCriteria<decltype(bowl)> criteria {};
+
+  Writer writer("results.csv");
+  // initialise initial condition and output 
+  // GradientDescent<decltype(bowl), decltype(criteria)>  gd_min { bowl, criteria };
+  GradientDescent gd_min { bowl, criteria, writer };
+  // create initial condition
+  Vectorf x(2), xopt(2);
+  x(0) = -10.0;
+  x(1) = 30.0;
+
+  gd_min.minimise(x, xopt);
+  
+}
+
